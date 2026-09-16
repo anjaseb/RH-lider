@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'data/database.dart';
+import 'screens/boas_vindas_screen.dart';
 import 'screens/configuracoes/registo_empresa_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell_screen.dart';
@@ -29,9 +30,17 @@ class AplicacaoGestao extends StatelessWidget {
   }
 }
 
-/// Decide o primeiro ecra: registo da empresa, login ou aplicacao principal.
-class PontoDeEntrada extends StatelessWidget {
+/// Decide o primeiro ecra: boas-vindas, registo da empresa, login ou
+/// aplicacao principal.
+class PontoDeEntrada extends StatefulWidget {
   const PontoDeEntrada({super.key});
+
+  @override
+  State<PontoDeEntrada> createState() => _PontoDeEntradaState();
+}
+
+class _PontoDeEntradaState extends State<PontoDeEntrada> {
+  bool _boasVindasVistas = false;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +53,11 @@ class PontoDeEntrada extends StatelessWidget {
           return const Scaffold(body: Carregando());
         }
         if (!auth.temEmpresa) {
+          if (!_boasVindasVistas) {
+            return BoasVindasScreen(
+              aoContinuar: () => setState(() => _boasVindasVistas = true),
+            );
+          }
           return const RegistoEmpresaScreen();
         }
         if (!auth.autenticado) {

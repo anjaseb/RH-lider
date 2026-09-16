@@ -22,17 +22,12 @@ jobs:
       - name: Activar suporte Windows
         run: flutter config --enable-windows-desktop
 
-<<<<<<< HEAD
       - name: Gerar a pasta windows
         run: flutter create --platforms=windows --project-name rh_lider .
 
       - name: Remover teste de exemplo gerado automaticamente
         shell: pwsh
         run: if (Test-Path test) { Remove-Item -Recurse -Force test }
-=======
-      - name: Gerar a pasta windows (se ainda nao existir)
-        run: flutter create --platforms=windows .
->>>>>>> 1670ba04b6fa5c120b0ab014e981f11d71af1ec0
 
       - name: Instalar dependencias
         run: flutter pub get
@@ -44,7 +39,6 @@ jobs:
       - name: Compilar em modo release
         run: flutter build windows --release
 
-<<<<<<< HEAD
       - name: Incluir as bibliotecas do Visual C++ na aplicacao
         shell: pwsh
         run: |
@@ -73,17 +67,4 @@ jobs:
         with:
           name: RH-Lider-Setup
           path: installer\installer_output\RH-Lider-Setup.exe
-=======
-      - name: Preparar pacote
-        run: |
-          mkdir dist
-          xcopy /E /I /Y build\windows\x64\runner\Release dist\RHLider
-          powershell Compress-Archive -Path dist\RHLider\* -DestinationPath RH-Lider-Windows.zip
-
-      - name: Publicar o executavel
-        uses: actions/upload-artifact@v4
-        with:
-          name: RH-Lider-Windows
-          path: RH-Lider-Windows.zip
->>>>>>> 1670ba04b6fa5c120b0ab014e981f11d71af1ec0
           retention-days: 30

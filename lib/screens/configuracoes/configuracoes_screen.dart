@@ -4,6 +4,7 @@ import '../../data/database.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import 'sobre_screen.dart';
 
 class ConfiguracoesScreen extends StatefulWidget {
   const ConfiguracoesScreen({super.key});
@@ -231,6 +232,27 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                     _pastaDados.isEmpty ? 'A carregar...' : _pastaDados,
                     style: const TextStyle(fontSize: 12.5),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _cartao(
+              'Sobre este programa',
+              [
+                const Text(
+                  'Informacao sobre o RH Lider e sobre a equipa que o desenvolveu.',
+                  style: TextStyle(
+                      fontSize: 12.5, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SobreScreen()),
+                    );
+                  },
+                  child: const Text('Ver informacoes'),
                 ),
               ],
             ),
