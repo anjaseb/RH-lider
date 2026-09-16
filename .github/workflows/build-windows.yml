@@ -1,0 +1,70 @@
+name: Compilar Windows
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Obter o codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Activar suporte Windows
+        run: flutter config --enable-windows-desktop
+
+      - name: Gerar a pasta windows
+        run: flutter create --platforms=windows --project-name rh_lider .
+
+      - name: Remover teste de exemplo gerado automaticamente
+        shell: pwsh
+        run: if (Test-Path test) { Remove-Item -Recurse -Force test }
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Verificar o codigo
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: Compilar em modo release
+        run: flutter build windows --release
+
+      - name: Incluir as bibliotecas do Visual C++ na aplicacao
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -property installationPath
+          Write-Host "Visual Studio encontrado em: $vsPath"
+
+          $redistRoot = Join-Path $vsPath "VC\Redist\MSVC"
+          $verDir = Get-ChildItem -Path $redistRoot -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $crtDir = Get-ChildItem -Path $verDir.FullName -Recurse -Filter "vcruntime140.dll" |
+            Select-Object -First 1 -ExpandProperty DirectoryName
+          Write-Host "Bibliotecas do Visual C++ encontradas em: $crtDir"
+
+          Copy-Item -Path (Join-Path $crtDir "*.dll") -Destination "build\windows\x64\runner\Release\" -Force
+          Get-ChildItem "build\windows\x64\runner\Release\*.dll" | Select-Object Name
+
+      - name: Instalar o Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Criar o instalador
+        shell: pwsh
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss'
+
+      - name: Publicar o instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: RH-Lider-Setup
+          path: installer\installer_output\RH-Lider-Setup.exe
+          retention-days: 30
