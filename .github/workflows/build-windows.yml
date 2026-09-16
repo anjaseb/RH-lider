@@ -42,18 +42,49 @@ jobs:
       - name: Incluir as bibliotecas do Visual C++ na aplicacao
         shell: pwsh
         run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsPath = & $vswhere -latest -products * -property installationPath
-          Write-Host "Visual Studio encontrado em: $vsPath"
+          $dest = "build\windows\x64\runner\Release\"
+          $dllNames = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")
+          $found = @{}
 
-          $redistRoot = Join-Path $vsPath "VC\Redist\MSVC"
-          $verDir = Get-ChildItem -Path $redistRoot -Directory | Sort-Object Name -Descending | Select-Object -First 1
-          $crtDir = Get-ChildItem -Path $verDir.FullName -Recurse -Filter "vcruntime140.dll" |
-            Select-Object -First 1 -ExpandProperty DirectoryName
-          Write-Host "Bibliotecas do Visual C++ encontradas em: $crtDir"
+          # 1ª tentativa: System32, onde o runner ja tem o VC++ Redistributable instalado
+          foreach ($name in $dllNames) {
+            $sysPath = Join-Path "$env:WINDIR\System32" $name
+            if (Test-Path $sysPath) {
+              Copy-Item -Path $sysPath -Destination $dest -Force
+              $found[$name] = $true
+              Write-Host "Copiado do System32: $sysPath"
+            }
+          }
 
-          Copy-Item -Path (Join-Path $crtDir "*.dll") -Destination "build\windows\x64\runner\Release\" -Force
-          Get-ChildItem "build\windows\x64\runner\Release\*.dll" | Select-Object Name
+          # 2ª tentativa (fallback): procurar em qualquer instalacao do Visual Studio no runner
+          $missing = $dllNames | Where-Object { -not $found[$_] }
+          if ($missing.Count -gt 0) {
+            Write-Host "Nao encontradas no System32, a procurar em instalacoes do Visual Studio: $missing"
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            if (Test-Path $vswhere) {
+              $vsPaths = & $vswhere -products * -legacy -prerelease -property installationPath
+              foreach ($vsPath in $vsPaths) {
+                foreach ($name in $missing) {
+                  if ($found[$name]) { continue }
+                  $hit = Get-ChildItem -Path $vsPath -Recurse -Filter $name -ErrorAction SilentlyContinue |
+                    Select-Object -First 1 -ExpandProperty FullName
+                  if ($hit) {
+                    Copy-Item -Path $hit -Destination $dest -Force
+                    $found[$name] = $true
+                    Write-Host "Copiado de instalacao VS: $hit"
+                  }
+                }
+              }
+            }
+          }
+
+          $stillMissing = $dllNames | Where-Object { -not $found[$_] }
+          if ($stillMissing.Count -gt 0) {
+            Write-Error "Nao foi possivel localizar estas DLLs: $stillMissing"
+            exit 1
+          }
+
+          Get-ChildItem "$dest*.dll" | Select-Object Name
 
       - name: Instalar o Inno Setup
         run: choco install innosetup -y --no-progress
